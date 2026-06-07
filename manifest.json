@@ -3,6 +3,7 @@
     "thumbnail": "store/Thumbnail.png",
     "id": "com_vesyl_Tailscale",
     "name": "Tailscale",
+    "github": "https://github.com/benwyrosdick/streamdeck-tailscale",
     "descriptions": {
         "en_US": "Control Tailscale: connect, disconnect, switch accounts, and toggle exit nodes."
     },

@@ -1,0 +1,16 @@
+{
+    "generic": {
+        "copyright": "Copyright (C) 2026 Ben Wyrosdick",
+        "original-url": "https://github.com/benwyrosdick/streamdeck-tailscale",
+        "license": "MIT",
+        "license-url": "https://github.com/benwyrosdick/streamdeck-tailscale/blob/main/LICENSE",
+        "description": "Unofficial community plugin to control the local Tailscale daemon. Not affiliated with or endorsed by Tailscale Inc."
+    },
+    "assets/connected.png": {
+        "copyright": "Copyright (C) 2026 Ben Wyrosdick",
+        "original-url": "https://github.com/benwyrosdick/streamdeck-tailscale",
+        "license": "MIT",
+        "license-url": "https://github.com/benwyrosdick/streamdeck-tailscale/blob/main/LICENSE",
+        "description": "Original icon evoking the Tailscale dot-grid mark, drawn for this plugin. 'Tailscale' is a trademark of Tailscale Inc.; used nominatively to indicate compatibility."
+    }
+}

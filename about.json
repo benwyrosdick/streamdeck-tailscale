@@ -1,0 +1,15 @@
+{
+    "author": "Ben Wyrosdick",
+    "copyright": "Copyright (C) 2026 Ben Wyrosdick",
+    "support": "https://github.com/benwyrosdick/streamdeck-tailscale",
+    "comments": {
+        "en_US": "Controls the local Tailscale daemon via the tailscale CLI. Requires a one-time 'sudo tailscale set --operator=$USER' per account to allow unprivileged control."
+    },
+    "credits": {
+        "Developer": ["Ben Wyrosdick"],
+        "Assets": ["Ben Wyrosdick"]
+    },
+    "acknowledgements": {
+        "Trademarks": ["Tailscale is a trademark of Tailscale Inc. This is an unofficial, community plugin and is not affiliated with or endorsed by Tailscale Inc."]
+    }
+}
