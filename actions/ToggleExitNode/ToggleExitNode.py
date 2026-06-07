@@ -6,15 +6,27 @@ from gi.repository import Gtk, Adw
 from ..base.TailscaleActionBase import TailscaleActionBase
 from ...backend import tailscale_backend as ts
 
+# Sentinel stored when the user wants Tailscale to auto-pick the exit node.
+AUTO = "auto"
+AUTO_EXIT_NODE = "auto:any"
+
 
 class ToggleExitNode(TailscaleActionBase):
-    """Toggle a per-button configured exit node on and off."""
+    """Toggle an exit node on/off.
+
+    The chosen node is remembered per network (tailnet), because a node from
+    one account doesn't exist on another. When the node picked for the current
+    network isn't available — e.g. right after switching accounts — the button
+    falls back to Tailscale's automatic exit-node selection (auto:any) so it
+    never fails.
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.has_configuration = True
-        # Parallel list of exit-node values matching the combo model rows.
-        self._node_values = []
+        # Combo options in display order; index 0 is always "Automatic".
+        # Each entry: {"value": <ip|AUTO>, "label": <str>}.
+        self._options = []
 
     # ------------------------------------------------------------------ #
     # Lifecycle
@@ -32,36 +44,57 @@ class ToggleExitNode(TailscaleActionBase):
             return
         self.hide_error()
 
-        settings = self.get_settings()
-        configured = settings.get("exit_node")
-        label = settings.get("exit_node_label")
         active = ts.active_exit_node(status)
-
-        is_on = bool(active) and configured and self._matches(active, configured)
-        if is_on:
+        if active:
             self.set_icon("exit_node_on.png")
             self.safe_set_background([0, 90, 200, 255])
-            self.set_bottom_label((label or active.get("name", ""))[:12], font_size=12)
+            self.set_bottom_label((active.get("name") or "")[:12], font_size=12)
         else:
             self.set_icon("exit_node_off.png")
             self.safe_set_background([0, 0, 0, 0])
-            self.set_bottom_label((label or "")[:12], font_size=12)
-
-    def _matches(self, active_node, configured_value) -> bool:
-        return configured_value in (active_node.get("dns"), active_node.get("ip"), active_node.get("name"))
+            self.set_bottom_label(self._configured_label(status)[:12], font_size=12)
 
     def on_key_down(self):
-        settings = self.get_settings()
-        configured = settings.get("exit_node")
-        if not configured:
+        status = self.get_status()
+        if status is None:
             self.show_error(2)
             return
 
-        active = ts.active_exit_node(self.get_status())
-        if active and self._matches(active, configured):
+        # Pressing always turns off whatever exit node is currently active.
+        if ts.active_exit_node(status):
             self.do_mutation(self.plugin_base.backend.clear_exit_node)
-        else:
-            self.do_mutation(lambda: self.plugin_base.backend.set_exit_node(configured))
+            return
+
+        target = self._target_for_network(status)
+        self.do_mutation(lambda: self.plugin_base.backend.set_exit_node(target))
+
+    # ------------------------------------------------------------------ #
+    # Per-network choice resolution
+    # ------------------------------------------------------------------ #
+    def _network(self, status) -> str:
+        return ts.current_account(status) or ""
+
+    def _chosen_for_network(self, status):
+        """The {"value","label"} saved for the current network, or None."""
+        nbn = self.get_settings().get("nodes_by_network") or {}
+        return nbn.get(self._network(status))
+
+    def _target_for_network(self, status) -> str:
+        """The --exit-node value to apply on the current network."""
+        chosen = self._chosen_for_network(status)
+        value = chosen.get("value") if chosen else None
+        if value and value != AUTO:
+            # Only honour the saved node if it still exists on this network.
+            candidates = self.plugin_base.backend.list_exit_node_candidates(status)
+            if any(c["ip"] == value for c in candidates):
+                return value
+        return AUTO_EXIT_NODE
+
+    def _configured_label(self, status) -> str:
+        chosen = self._chosen_for_network(status)
+        if chosen and chosen.get("value") not in (None, AUTO):
+            return chosen.get("label") or ""
+        return self.plugin_base.lm.get("actions.toggle-exit-node.auto-short")
 
     # ------------------------------------------------------------------ #
     # Configuration UI
@@ -91,43 +124,39 @@ class ToggleExitNode(TailscaleActionBase):
 
     def load_model(self):
         self.disconnect_signals()
-        self._node_values = []
+        self._options = []
         while self.node_model.get_n_items() > 0:
             self.node_model.remove(0)
 
-        candidates = self.plugin_base.backend.list_exit_node_candidates(self.get_status())
-        if not candidates:
-            self.node_model.append(self.plugin_base.lm.get("actions.toggle-exit-node.none"))
-            self.connect_signals()
-            return
+        # First option: let Tailscale pick automatically.
+        auto_label = self.plugin_base.lm.get("actions.toggle-exit-node.auto")
+        self._options.append({"value": AUTO, "label": auto_label})
+        self.node_model.append(auto_label)
 
-        for c in candidates:
-            # Use the Tailscale IP as the --exit-node value (most robust,
-            # unambiguously documented); show the friendly machine name.
-            value = c["ip"] or c["dns"] or c["name"]
-            self._node_values.append({"value": value, "label": c["name"]})
-            self.node_model.append(c["name"] or value)
+        for c in self.plugin_base.backend.list_exit_node_candidates(self.get_status()):
+            self._options.append({"value": c["ip"], "label": c["name"]})
+            self.node_model.append(c["name"] or c["ip"])
 
         self.connect_signals()
 
     def load_configs(self):
         self.disconnect_signals()
-        settings = self.get_settings()
-        configured = settings.get("exit_node")
-        index = next((i for i, n in enumerate(self._node_values) if n["value"] == configured), None)
-        if index is not None:
-            self.node_row.set_selected(index)
-        else:
-            self.node_row.set_selected(Gtk.INVALID_LIST_POSITION)
+        chosen = self._chosen_for_network(self.get_status())
+        target = chosen.get("value") if chosen else AUTO
+        index = next((i for i, o in enumerate(self._options) if o["value"] == target), 0)
+        self.node_row.set_selected(index)
         self.connect_signals()
 
     def on_change(self, *args):
-        if not self._node_values:
+        if not self._options:
             return
         index = self.node_row.get_selected()
-        if not (0 <= index < len(self._node_values)):
+        if not (0 <= index < len(self._options)):
             return
+        opt = self._options[index]
+
         settings = self.get_settings()
-        settings["exit_node"] = self._node_values[index]["value"]
-        settings["exit_node_label"] = self._node_values[index]["label"]
+        nbn = settings.get("nodes_by_network") or {}
+        nbn[self._network(self.get_status())] = {"value": opt["value"], "label": opt["label"]}
+        settings["nodes_by_network"] = nbn
         self.set_settings(settings)

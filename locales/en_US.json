@@ -12,7 +12,9 @@
     "actions.switch-account.needs-operator": "Run: sudo tailscale set --operator=$USER",
 
     "actions.toggle-exit-node.node.label": "Exit Node",
-    "actions.toggle-exit-node.node.subtitle": "The exit node this button toggles on and off",
+    "actions.toggle-exit-node.node.subtitle": "Remembered per account; falls back to automatic if unavailable",
+    "actions.toggle-exit-node.auto": "Automatic (recommended)",
+    "actions.toggle-exit-node.auto-short": "Auto",
     "actions.toggle-exit-node.none": "No exit nodes available",
 
     "state.connected": "Connected",
