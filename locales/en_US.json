@@ -1,0 +1,23 @@
+{
+    "plugin.name": "Tailscale",
+
+    "actions.connect.name": "Connect",
+    "actions.disconnect.name": "Disconnect",
+    "actions.toggle-connection.name": "Toggle Connection",
+    "actions.switch-account.name": "Switch Account",
+    "actions.toggle-exit-node.name": "Toggle Exit Node",
+
+    "actions.switch-account.profile-a.label": "Account A",
+    "actions.switch-account.profile-b.label": "Account B",
+    "actions.switch-account.needs-operator": "Run: sudo tailscale set --operator=$USER",
+
+    "actions.toggle-exit-node.node.label": "Exit Node",
+    "actions.toggle-exit-node.node.subtitle": "The exit node this button toggles on and off",
+    "actions.toggle-exit-node.none": "No exit nodes available",
+
+    "state.connected": "Connected",
+    "state.disconnected": "Disconnected",
+    "state.connecting": "Connecting…",
+    "state.needs-login": "Needs login",
+    "state.unavailable": "Tailscale unavailable"
+}

@@ -1,0 +1,18 @@
+{
+    "version": "1.0.0",
+    "thumbnail": "store/Thumbnail.png",
+    "id": "com_vesyl_Tailscale",
+    "name": "Tailscale",
+    "descriptions": {
+        "en_US": "Control Tailscale: connect, disconnect, switch accounts, and toggle exit nodes."
+    },
+    "short-descriptions": {
+        "en_US": "Control Tailscale from your Stream Deck"
+    },
+    "tags": ["Network", "VPN", "Tailscale"],
+    "minimum-app-version": "1.5.0-beta.14",
+    "app-version": "1.5.0-beta.14",
+
+    "description": "Control Tailscale: connect, disconnect, switch accounts, and toggle exit nodes.",
+    "short-description": "Control Tailscale from your Stream Deck"
+}
