@@ -30,18 +30,16 @@ class ToggleConnection(TailscaleActionBase):
             return
         self.hide_error()
 
+        # The account name persists across states; only icon/background change.
+        self.set_bottom_label((ts.current_account(status) or "")[:12], font_size=12)
+
         state = ts.backend_state(status)
         if state == "Running":
             self.set_icon("connected.png")
             self.safe_set_background([0, 150, 60, 255])
-            account = ts.current_account(status)
-            if account:
-                self.set_bottom_label(account[:12], font_size=12)
         elif state in ("Starting", "NoState"):
             self.set_icon("connecting.png")
             self.safe_set_background([200, 140, 0, 255])
-            self.set_bottom_label("", font_size=12)
         else:
             self.set_icon("disconnected.png")
-            self.safe_set_background([120, 120, 120, 255])
-            self.set_bottom_label("", font_size=12)
+            self.safe_set_background([0, 0, 0, 0])  # default deck background

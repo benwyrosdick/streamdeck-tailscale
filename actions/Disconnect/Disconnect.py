@@ -27,4 +27,4 @@ class Disconnect(TailscaleActionBase):
             self.safe_set_background([0, 0, 0, 0])
         else:
             self.set_icon("disconnected.png")
-            self.safe_set_background([120, 120, 120, 255])
+            self.safe_set_background([0, 0, 0, 0])  # default deck background
