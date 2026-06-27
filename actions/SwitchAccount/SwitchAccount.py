@@ -30,11 +30,13 @@ class SwitchAccount(TailscaleActionBase):
         self.set_icon("account.png")
         if status is None:
             self.show_error()
+            self.commit_render("error")
             return
         self.hide_error()
         account = ts.current_account(status)
         if account:
             self.set_bottom_label(account[:12], font_size=12)
+        self.commit_render(f"account|{account}")
 
     def on_key_down(self):
         settings = self.get_settings()

@@ -28,6 +28,42 @@ class TailscaleActionBase(ActionBase):
         except AttributeError:
             pass
 
+    def commit_render(self, signature):
+        """Guarantee the latest render reaches the physical key.
+
+        StreamController skips a repaint whenever the composed image's hash
+        matches the previous one (DeckController.ControllerKey.update). It
+        advances that stored hash *before* the async paint task is confirmed,
+        so when a paint is dropped or superseded -- which happens during page
+        reloads and status transitions -- the key is stranded on a stale frame
+        and every subsequent render is deduped away. That is the "stuck until I
+        press the button" bug (a key press changes the image via the press
+        highlight, which is the only thing that breaks the dedup).
+
+        Call this at the end of render() with a signature describing everything
+        visible (icon + background + label). When it changes we force one
+        repaint that bypasses the hash, so the new frame always lands. On
+        unchanged renders we do nothing, preserving the dedup's efficiency.
+        """
+        if signature == getattr(self, "_last_render_sig", None):
+            return
+        self._last_render_sig = signature
+
+        inp = self.get_input()
+        if inp is None:
+            return
+        try:
+            inp.update(force=True)
+        except TypeError:
+            # Dials/touchscreens have an update() without a `force` parameter.
+            try:
+                inp.update()
+            except Exception:
+                pass
+        except Exception:
+            # Never let a redraw failure escape render().
+            pass
+
     def render(self):
         """Read fresh-ish status and update the button. Overridden per action."""
         raise NotImplementedError
@@ -50,7 +86,11 @@ class TailscaleActionBase(ActionBase):
             except Exception as e:
                 log.exception("[tailscale] do_mutation raised: {}", e)
             finally:
+                # Force a fresh read (bypassing the cache and any in-flight
+                # periodic fetch) so the button reflects the new state right
+                # away instead of waiting for the next tick.
                 self.plugin_base.invalidate_status()
+                self.plugin_base.get_status(force=True)
                 try:
                     self.render()
                 except Exception:

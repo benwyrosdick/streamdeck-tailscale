@@ -41,18 +41,23 @@ class ToggleExitNode(TailscaleActionBase):
         status = self.get_status()
         if status is None:
             self.show_error()
+            self.commit_render("error")
             return
         self.hide_error()
 
         active = ts.active_exit_node(status)
         if active:
+            label = (active.get("name") or "")[:12]
             self.set_icon("exit_node_on.png")
             self.safe_set_background([0, 90, 200, 255])
-            self.set_bottom_label((active.get("name") or "")[:12], font_size=12)
+            self.set_bottom_label(label, font_size=12)
+            self.commit_render(f"on|{label}")
         else:
+            label = self._configured_label(status)[:12]
             self.set_icon("exit_node_off.png")
             self.safe_set_background([0, 0, 0, 0])
-            self.set_bottom_label(self._configured_label(status)[:12], font_size=12)
+            self.set_bottom_label(label, font_size=12)
+            self.commit_render(f"off|{label}")
 
     def on_key_down(self):
         status = self.get_status()

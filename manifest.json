@@ -1,7 +1,7 @@
 {
     "version": "1.0.0",
     "thumbnail": "store/Thumbnail.png",
-    "id": "com_vesyl_Tailscale",
+    "id": "com_benwyrosdick_Tailscale",
     "name": "Tailscale",
     "github": "https://github.com/benwyrosdick/streamdeck-tailscale",
     "descriptions": {

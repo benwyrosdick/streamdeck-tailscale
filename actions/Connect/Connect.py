@@ -20,11 +20,14 @@ class Connect(TailscaleActionBase):
         status = self.get_status()
         if status is None:
             self.show_error()
+            self.commit_render("error")
             return
         self.hide_error()
         if ts.is_connected(status):
             self.set_icon("connected.png")
             self.safe_set_background([0, 150, 60, 255])
+            self.commit_render("connected")
         else:
             self.set_icon("disconnected.png")
             self.safe_set_background([0, 0, 0, 0])
+            self.commit_render("disconnected")

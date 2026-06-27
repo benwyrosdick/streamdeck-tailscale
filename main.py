@@ -32,6 +32,9 @@ class TailscalePlugin(PluginBase):
         self._status_cache = None
         self._status_cache_ts = 0.0
         self._status_lock = threading.Lock()
+        # True while a background fetch is mid-flight. Lets concurrent callers
+        # reuse the cached value instead of queueing behind the subprocess.
+        self._status_fetching = False
 
         # Register actions
         self.connect_holder = ActionHolder(
@@ -102,7 +105,7 @@ class TailscalePlugin(PluginBase):
         # Register plugin
         self.register(
             plugin_name=self.lm.get("plugin.name"),
-            github_repo="https://github.com/vesyl/streamdeck-tailscale",
+            github_repo="https://github.com/benwyrosdick/streamdeck-tailscale",
             plugin_version="1.0.0",
             app_version="1.5.0-beta.14",
         )
@@ -110,20 +113,50 @@ class TailscalePlugin(PluginBase):
     # ------------------------------------------------------------------ #
     # Shared cached status
     # ------------------------------------------------------------------ #
-    def get_status(self, max_age_seconds: float = 2.0):
+    def get_status(self, max_age_seconds: float = 2.0, force: bool = False):
         """Return a recent `tailscale status --json` dict (or None on failure).
 
         Re-fetches only when the cached value is older than max_age_seconds.
+
+        The blocking `tailscale status` subprocess runs OUTSIDE the lock so a
+        slow/stalled call can never freeze other buttons' renders. A
+        single-flight guard means only one periodic fetch runs at a time;
+        concurrent callers (every action's on_tick fires its own thread each
+        second) get the current cached value immediately instead of piling up
+        behind the lock. A transient fetch failure serves the last good value
+        rather than flashing an error and stranding a stale icon.
+
+        `force=True` always performs a fresh fetch and bypasses the
+        single-flight guard. Mutations (up/down/switch) use it so the button
+        reflects the new state the instant the command returns.
         """
         now = time.monotonic()
-        with self._status_lock:
-            if self._status_cache is not None and (now - self._status_cache_ts) < max_age_seconds:
-                return self._status_cache
+        if not force:
+            with self._status_lock:
+                fresh = (
+                    self._status_cache is not None
+                    and (now - self._status_cache_ts) < max_age_seconds
+                )
+                if fresh or self._status_fetching:
+                    # Cache is fresh, or someone else is already refreshing it:
+                    # return what we have (never block on the subprocess).
+                    return self._status_cache
+                self._status_fetching = True
+
+        status = None
+        try:
             status = self.backend.get_status()
-            if status is not None:
-                self._status_cache = status
-                self._status_cache_ts = now
-            return status
+        finally:
+            with self._status_lock:
+                if not force:
+                    self._status_fetching = False
+                if status is not None:
+                    self._status_cache = status
+                    self._status_cache_ts = time.monotonic()
+                else:
+                    # Transient failure: keep serving the last good value.
+                    status = self._status_cache
+        return status
 
     def invalidate_status(self):
         """Force the next get_status() to re-fetch (call after a mutation)."""
