@@ -2,7 +2,11 @@ import os
 import threading
 
 from loguru import logger as log
+from PIL import Image
 from src.backend.PluginManager.ActionBase import ActionBase
+
+# RGB used when an icon is recolored dark for legibility on a light background.
+DARK_ICON_RGB = (30, 30, 30)
 
 
 class TailscaleActionBase(ActionBase):
@@ -10,6 +14,9 @@ class TailscaleActionBase(ActionBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Cache of recolored icons keyed by (path, tint) so we don't reprocess
+        # the PNG on every tick.
+        self._icon_cache = {}
 
     # ------------------------------------------------------------------ #
     # Status / rendering helpers
@@ -17,9 +24,44 @@ class TailscaleActionBase(ActionBase):
     def get_status(self, max_age: float = 2.0):
         return self.plugin_base.get_status(max_age)
 
-    def set_icon(self, name: str, size: float = 0.75):
+    def set_icon(self, name: str, size: float = 0.75, tint=None):
+        """Draw an asset icon, optionally recolored to a solid `tint` (an
+        (r, g, b) tuple). Tinting keeps the PNG's alpha mask, so the icon's
+        shape is preserved while its color is replaced — used to render a dark
+        icon over light backgrounds."""
         path = os.path.join(self.plugin_base.PATH, "assets", name)
-        self.set_media(media_path=path, size=size)
+        if tint is None:
+            self.set_media(media_path=path, size=size)
+            return
+        self.set_media(image=self._tinted_icon(path, tint), size=size)
+
+    def _tinted_icon(self, path: str, tint) -> "Image.Image":
+        key = (path, tuple(tint))
+        cached = self._icon_cache.get(key)
+        if cached is not None:
+            return cached
+        base = Image.open(path).convert("RGBA")
+        solid = Image.new("RGBA", base.size, (tint[0], tint[1], tint[2], 0))
+        solid.putalpha(base.getchannel("A"))
+        self._icon_cache[key] = solid
+        return solid
+
+    def icon_tint_for_background(self, color):
+        """Return DARK_ICON_RGB when `color` is a light, mostly-opaque
+        background (so the otherwise-light icon stays legible); else None.
+
+        Transparent/low-alpha colors fall through to None because the deck's
+        own (dark) background shows behind them.
+        """
+        if not color:
+            return None
+        r, g, b = color[0], color[1], color[2]
+        alpha = color[3] if len(color) > 3 else 255
+        if alpha < 128:
+            return None
+        # Perceptual luminance (Rec. 601). ~150/255 is a sensible light/dark cut.
+        luminance = 0.299 * r + 0.587 * g + 0.114 * b
+        return DARK_ICON_RGB if luminance > 150 else None
 
     def safe_set_background(self, color):
         # set_background_color raises AttributeError on some 1.5.0-beta builds.

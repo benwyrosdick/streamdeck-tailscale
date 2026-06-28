@@ -9,6 +9,7 @@
 
     "actions.switch-account.profile-a.label": "Account A",
     "actions.switch-account.profile-b.label": "Account B",
+    "actions.switch-account.color.tooltip": "Background color shown when this account is active",
     "actions.switch-account.needs-operator": "Run: sudo tailscale set --operator=$USER",
 
     "actions.toggle-exit-node.node.label": "Exit Node",
