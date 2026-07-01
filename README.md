@@ -2,6 +2,20 @@
 
 Control [Tailscale](https://tailscale.com) from your Stream Deck.
 
+## Installation
+
+**From the StreamController store (recommended):** open StreamController, go to
+**Store → Plugins**, search for **Tailscale**, and click install.
+
+**Manual / development:** clone this repo and symlink it into StreamController's
+plugin directory, then restart StreamController:
+
+```sh
+git clone https://github.com/benwyrosdick/streamdeck-tailscale
+ln -s "$(pwd)/streamdeck-tailscale" \
+  ~/.var/app/com.core447.StreamController/data/plugins/com_benwyrosdick_Tailscale
+```
+
 ## Actions
 
 | Action | What it does |
@@ -49,3 +63,13 @@ background thread so the deck never freezes while `tailscale up` negotiates.
   re-authentication; log in to each profile from the host at least once.
 - Exit-node candidates are discovered from your tailnet automatically (any
   peer advertising itself as an exit node).
+
+## Disclaimer
+
+This is an unofficial, community-maintained plugin. It is not affiliated with,
+sponsored by, or endorsed by Tailscale Inc. "Tailscale" is a trademark of
+Tailscale Inc.; it is used here nominatively only to indicate compatibility.
+
+## License
+
+[MIT](LICENSE) © Ben Wyrosdick

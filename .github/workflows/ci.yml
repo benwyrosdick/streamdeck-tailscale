@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Validate metadata JSON
+        run: |
+          python -c "import json; [json.load(open(f)) for f in ['manifest.json', 'attribution.json', 'about.json', 'locales/en_US.json']]"
+
+      - name: Compile-check plugin modules
+        # compileall byte-compiles without importing, so the gi/GTK and
+        # StreamController modules are syntax-checked without their runtime deps.
+        run: python -m compileall main.py actions backend
+
+      - name: Install dev dependencies
+        run: python -m pip install --upgrade pip -r requirements-dev.txt
+
+      - name: Run tests
+        run: pytest -q
