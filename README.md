@@ -1,5 +1,7 @@
 # Tailscale plugin for StreamController
 
+![Tailscale](store/Thumbnail.png)
+
 Control [Tailscale](https://tailscale.com) from your Stream Deck.
 
 ## Installation
